@@ -9,6 +9,7 @@ import fs from "fs";
 import { Server } from "socket.io";
 
 // Routes
+import authRouter from "./routes/auth.routes";
 import calendarRouter from "./routes/calendar.router";
 import rideRouter from "./routes/ride.router";
 import driverRouter from "./routes/driver.router";
@@ -171,6 +172,11 @@ app.get("/api", (req: Request, res: Response) => {
       me: "GET /api/users/me",
       updateMe: "PUT /api/users/me",
     },
+    authEndpoints: {
+      register: "POST /api/auth/register",
+      login: "POST /api/auth/login",
+      profile: "GET /api/auth/profile (requires auth)",
+    },
     calendarEndpoints: {
       getBookings: "GET /api/calendar (requires auth)",
       getBooking: "GET /api/calendar/:id (requires auth)",
@@ -182,7 +188,8 @@ app.get("/api", (req: Request, res: Response) => {
 });
 
 // API Routes
-app.use("/api/users", userRouter);
+app.use("/api/auth", authRouter); // New auth routes (alternative to /api/users)
+app.use("/api/users", userRouter); // Existing user routes (register/login also here)
 app.use("/api/rides", rideRouter);
 app.use("/api/drivers", driverRouter);
 app.use("/api/services", serviceRouter);
