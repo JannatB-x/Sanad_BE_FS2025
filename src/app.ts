@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import morgan from "morgan";
 import path from "path";
+import fs from "fs";
 import { Server } from "socket.io";
 
 // Routes
@@ -107,9 +108,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan("dev"));
 
-// Static Files
+// Request logging middleware (for debugging)
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    console.log(`📥 Incoming request: ${req.method} ${req.path}`);
+  }
+  next();
+});
+
+// Static Files - Ensure uploads directory exists
 const uploadsPath = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+  console.log("✅ Created uploads directory");
+}
 app.use("/uploads", express.static(uploadsPath));
+console.log("✅ Static file serving enabled at /uploads");
 
 // Root Route
 app.get("/", (req: Request, res: Response) => {
@@ -149,6 +163,21 @@ app.get("/api", (req: Request, res: Response) => {
       wallet: "/api/wallet",
       history: "/api/history",
     },
+    userEndpoints: {
+      register: "POST /api/users/register",
+      login: "POST /api/users/login",
+      profile: "GET /api/users/profile",
+      updateProfile: "PUT /api/users/profile",
+      me: "GET /api/users/me",
+      updateMe: "PUT /api/users/me",
+    },
+    calendarEndpoints: {
+      getBookings: "GET /api/calendar (requires auth)",
+      getBooking: "GET /api/calendar/:id (requires auth)",
+      createBooking: "POST /api/calendar (requires auth)",
+      updateBooking: "PUT /api/calendar/:id (requires auth)",
+      deleteBooking: "DELETE /api/calendar/:id (requires auth)",
+    },
   });
 });
 
@@ -159,10 +188,24 @@ app.use("/api/drivers", driverRouter);
 app.use("/api/services", serviceRouter);
 app.use("/api/payments", paymentRouter);
 app.use("/api/calendar", calendarRouter);
+console.log("✅ Calendar router registered at /api/calendar");
 app.use("/api/reviews", reviewRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/wallet", walletRouter);
 app.use("/api/history", historyRouter);
+
+// Log registered routes (for debugging)
+console.log("✅ Registered API routes:");
+console.log("   POST /api/users/register");
+console.log("   POST /api/users/login");
+console.log("   GET  /api/users/me");
+console.log("   PUT  /api/users/me");
+console.log("   GET  /api/users/profile");
+console.log("   PUT  /api/users/profile");
+console.log("   GET  /api/calendar");
+console.log("   POST /api/calendar");
+console.log("   PUT  /api/calendar/:id");
+console.log("   DELETE /api/calendar/:id");
 
 // Error Handlers (Must be last!)
 app.use(notFoundHandler);

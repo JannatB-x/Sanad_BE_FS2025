@@ -77,6 +77,15 @@ const userSchema = new Schema({
       ref: "SavedLocations",
     },
   ],
+  Avatar: {
+    type: String,
+    default: "",
+  },
+  Documents: [
+    {
+      type: String, // File paths
+    },
+  ],
 });
 
 const User = model("User", userSchema);

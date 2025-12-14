@@ -37,6 +37,15 @@ const driverSchema = new Schema({
       ref: "Booking",
     },
   ],
+  licenseDocument: {
+    type: String, // File path to license document
+    default: "",
+  },
+  documents: [
+    {
+      type: String, // File paths to verification documents
+    },
+  ],
 });
 
 const Driver = model("Driver", driverSchema);

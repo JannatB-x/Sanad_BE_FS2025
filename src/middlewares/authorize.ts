@@ -12,7 +12,7 @@ export function authorize(req: Request, res: Response, next: NextFunction) {
     const [schema, token] = header?.split(" ") || [];
 
     if (schema != "Bearer" || !token) {
-      res.status(401).json("Invalid Authorization");
+      return res.status(401).json({ message: "Invalid Authorization" });
     }
 
     const payload = jwt.verify(

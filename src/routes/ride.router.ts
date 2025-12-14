@@ -17,11 +17,7 @@ import { authorize } from "../middlewares/authorize";
 
 const router = express.Router();
 
-// Public/Admin routes
-router.get("/", getAllRides);
-router.get("/:id", getRideById);
-
-// Authenticated user routes
+// Specific routes (must be before /:id to avoid conflicts)
 router.get("/history/all", authorize, getRideHistory);
 router.get("/upcoming/index", authorize, getUpcomingRides);
 router.get("/:rideId/driver/location", authorize, getDriverLocation);
@@ -30,7 +26,9 @@ router.post("/estimate", authorize, estimateFare);
 router.put("/:rideId/cancel", authorize, cancelRide);
 router.put("/:rideId/dropoff", authorize, updateDropoffLocation);
 
-// General CRUD routes
+// General CRUD routes (protected)
+router.get("/", authorize, getAllRides);
+router.get("/:id", authorize, getRideById);
 router.post("/", authorize, createRide);
 router.put("/:id", authorize, updateRide);
 router.delete("/:id", authorize, deleteRide);

@@ -1,6 +1,7 @@
 import express from "express";
 import { authorize } from "../middlewares/authorize";
 import { driverMiddleware } from "../middlewares/driverMiddleware";
+import { upload } from "../config/multer";
 import * as driverController from "../controllers/driver.controller";
 
 const router = express.Router();
@@ -52,6 +53,34 @@ router.get(
   authorize,
   driverMiddleware,
   driverController.getEarnings
+);
+
+// File upload routes
+router.post(
+  "/license",
+  authorize,
+  driverMiddleware,
+  upload.single("license"),
+  driverController.uploadLicense
+);
+router.post(
+  "/documents",
+  authorize,
+  driverMiddleware,
+  upload.array("documents", 10),
+  driverController.uploadDocuments
+);
+router.delete(
+  "/license",
+  authorize,
+  driverMiddleware,
+  driverController.deleteLicense
+);
+router.delete(
+  "/documents/:documentPath",
+  authorize,
+  driverMiddleware,
+  driverController.deleteDocument
 );
 
 export default router;

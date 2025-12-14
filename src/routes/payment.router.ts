@@ -5,14 +5,22 @@ import {
   createPayment,
   updatePayment,
   deletePayment,
+  processPayment,
+  paymentCallback,
 } from "../controllers/payment.controller";
+import { authorize } from "../middlewares/authorize";
 
 const router = express.Router();
 
-router.get("/", getAllPayments);
-router.get("/:id", getPaymentById);
-router.post("/", createPayment);
-router.put("/:id", updatePayment);
-router.delete("/:id", deletePayment);
+// Payment processing routes (should be before /:id route)
+router.post("/process", authorize, processPayment);
+router.post("/callback", paymentCallback); // Webhook - no auth needed
+
+// CRUD routes (all protected)
+router.get("/", authorize, getAllPayments);
+router.get("/:id", authorize, getPaymentById);
+router.post("/", authorize, createPayment);
+router.put("/:id", authorize, updatePayment);
+router.delete("/:id", authorize, deletePayment);
 
 export default router;

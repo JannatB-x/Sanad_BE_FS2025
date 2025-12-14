@@ -201,6 +201,8 @@ const getCurrentUser = async (
         emergencyContact: user.EmergencyContact,
         emergencyContactPhone: user.EmergencyContactPhone,
         emergencyContactRelationship: user.EmergencyContactRelationship,
+        avatar: user.Avatar || "",
+        documents: user.Documents || [],
       },
     });
   } catch (error) {
@@ -248,7 +250,168 @@ const updateCurrentUser = async (
         emergencyContact: user.EmergencyContact,
         emergencyContactPhone: user.EmergencyContactPhone,
         emergencyContactRelationship: user.EmergencyContactRelationship,
+        avatar: user.Avatar || "",
+        documents: user.Documents || [],
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Upload user avatar
+const uploadAvatar = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { Avatar: fileUrl },
+      { new: true }
+    ).select("-Password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Avatar uploaded successfully",
+      avatar: fileUrl,
+      user: {
+        id: user._id,
+        name: user.Name,
+        email: user.Email,
+        avatar: user.Avatar,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Upload user documents
+const uploadDocuments = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+
+    const files = Array.isArray(req.files) ? req.files : [req.files];
+    const fileUrls = files.map((file: any) => `/uploads/${file.filename}`);
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Append new documents to existing ones
+    const updatedDocuments = [...(user.Documents || []), ...fileUrls];
+    user.Documents = updatedDocuments;
+    await user.save();
+
+    res.status(200).json({
+      message: "Documents uploaded successfully",
+      documents: fileUrls,
+      totalDocuments: updatedDocuments.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete user avatar
+const deleteAvatar = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { Avatar: "" },
+      { new: true }
+    ).select("-Password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Avatar deleted successfully",
+      user: {
+        id: user._id,
+        name: user.Name,
+        email: user.Email,
+        avatar: user.Avatar,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete user document
+const deleteDocument = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+    const documentPath = req.params.documentPath;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Decode the document path (it might be URL encoded)
+    const decodedPath = decodeURIComponent(documentPath);
+    user.Documents = (user.Documents || []).filter(
+      (doc) => doc !== decodedPath && doc !== `/uploads/${decodedPath}`
+    );
+    await user.save();
+
+    res.status(200).json({
+      message: "Document deleted successfully",
+      remainingDocuments: user.Documents.length,
     });
   } catch (error) {
     next(error);
@@ -265,4 +428,8 @@ export {
   loginUser,
   getCurrentUser,
   updateCurrentUser,
+  uploadAvatar,
+  uploadDocuments,
+  deleteAvatar,
+  deleteDocument,
 };

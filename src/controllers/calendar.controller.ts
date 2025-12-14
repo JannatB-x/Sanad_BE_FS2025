@@ -11,12 +11,19 @@ import { CustomRequest } from "../type/http";
 const getBookings = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const r = req as CustomRequest;
-    console.log(r.user);
-    if (r.user?.role != "author") {
-      res.status(401).json("Not Authorized");
+    const userId = r.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not Authorized" });
     }
+
+    // Users can see their own bookings, admins can see all
+    // For now, allow all authenticated users to see all bookings
+    // TODO: Filter by userId for regular users if needed
     const Bookings = await Calendar.find().populate("Bookings");
-    res.status(200).json(Bookings);
+    res
+      .status(200)
+      .json({ message: "Bookings retrieved successfully", bookings: Bookings });
   } catch (error) {
     next(error);
   }
@@ -28,8 +35,21 @@ const getBookingById = async (
   next: NextFunction
 ) => {
   try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not Authorized" });
+    }
+
     const booking = await Calendar.findById(req.params.id);
-    res.status(200).json(booking);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Booking retrieved successfully", booking });
   } catch (error) {
     next(error);
   }
@@ -42,13 +62,26 @@ const createBooking = async (
 ) => {
   try {
     const r = req as CustomRequest;
-    console.log(r.user);
-    if (r.user?.role != "booking") {
-      res.status(401).json("Not Authorized");
+    const userId = r.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not Authorized" });
     }
-    console.log("first");
-    const newBooking = await Calendar.create(req.body);
-    res.status(201).json(newBooking);
+
+    // Allow users with role "user" or "admin" to create bookings
+    // Associate the booking with the user
+    const bookingData = {
+      ...req.body,
+      userId: userId, // Associate booking with the authenticated user
+    };
+
+    const newBooking = await Calendar.create(bookingData);
+    const bookingDoc = Array.isArray(newBooking) ? newBooking[0] : newBooking;
+
+    res.status(201).json({
+      message: "Booking created successfully",
+      booking: bookingDoc,
+    });
   } catch (error) {
     next(error);
   }
@@ -61,14 +94,37 @@ const updateBooking = async (
 ) => {
   try {
     const r = req as CustomRequest;
-    console.log(r.user);
-    if (r.user?.role != "booking") {
-      res.status(401).json("Not Authorized");
+    const userId = r.user?.id;
+    const userRole = r.user?.role;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not Authorized" });
     }
-    const booking = await Calendar.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+
+    const booking = await Calendar.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Users can only update their own bookings, admins can update any
+    // Check if booking has userId field and match it, or allow admin role
+    const bookingUserId = (booking as any).userId?.toString();
+    if (userRole !== "admin" && bookingUserId && bookingUserId !== userId) {
+      return res.status(403).json({
+        message: "Forbidden: You can only update your own bookings",
+      });
+    }
+
+    const updatedBooking = await Calendar.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Booking updated successfully",
+      booking: updatedBooking,
     });
-    res.status(200).json(booking);
   } catch (error) {
     next(error);
   }
@@ -81,10 +137,27 @@ const deleteBooking = async (
 ) => {
   try {
     const r = req as CustomRequest;
-    console.log(r.user);
-    if (r.user?.role != "booking") {
-      res.status(401).json("Not Authorized");
+    const userId = r.user?.id;
+    const userRole = r.user?.role;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not Authorized" });
     }
+
+    const booking = await Calendar.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Users can only delete their own bookings, admins can delete any
+    // Check if booking has userId field and match it, or allow admin role
+    const bookingUserId = (booking as any).userId?.toString();
+    if (userRole !== "admin" && bookingUserId && bookingUserId !== userId) {
+      return res.status(403).json({
+        message: "Forbidden: You can only delete your own bookings",
+      });
+    }
+
     await Calendar.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Booking deleted successfully" });
   } catch (error) {

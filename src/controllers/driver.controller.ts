@@ -313,6 +313,163 @@ const getEarnings = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+// Upload driver license
+const uploadLicense = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const driverId = r.user?.id;
+
+    if (!driverId) {
+      return res.status(401).json({ message: "Driver not authenticated" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const driver = await Driver.findByIdAndUpdate(
+      driverId,
+      { licenseDocument: fileUrl },
+      { new: true }
+    ).populate("userId");
+
+    if (!driver) {
+      return res.status(404).json({ message: "Driver not found" });
+    }
+
+    res.status(200).json({
+      message: "License document uploaded successfully",
+      licenseDocument: fileUrl,
+      driver: {
+        id: driver._id,
+        licenseNumber: driver.licenseNumber,
+        licenseDocument: driver.licenseDocument,
+      },
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+// Upload driver documents
+const uploadDocuments = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const driverId = r.user?.id;
+
+    if (!driverId) {
+      return res.status(401).json({ message: "Driver not authenticated" });
+    }
+
+    if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+
+    const files = Array.isArray(req.files) ? req.files : [req.files];
+    const fileUrls = files.map((file: any) => `/uploads/${file.filename}`);
+
+    const driver = await Driver.findById(driverId);
+    if (!driver) {
+      return res.status(404).json({ message: "Driver not found" });
+    }
+
+    // Append new documents to existing ones
+    const updatedDocuments = [...(driver.documents || []), ...fileUrls];
+    driver.documents = updatedDocuments;
+    await driver.save();
+
+    res.status(200).json({
+      message: "Documents uploaded successfully",
+      documents: fileUrls,
+      totalDocuments: updatedDocuments.length,
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+// Delete driver license
+const deleteLicense = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const driverId = r.user?.id;
+
+    if (!driverId) {
+      return res.status(401).json({ message: "Driver not authenticated" });
+    }
+
+    const driver = await Driver.findByIdAndUpdate(
+      driverId,
+      { licenseDocument: "" },
+      { new: true }
+    );
+
+    if (!driver) {
+      return res.status(404).json({ message: "Driver not found" });
+    }
+
+    res.status(200).json({
+      message: "License document deleted successfully",
+      driver: {
+        id: driver._id,
+        licenseNumber: driver.licenseNumber,
+        licenseDocument: driver.licenseDocument,
+      },
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+// Delete driver document
+const deleteDocument = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const driverId = r.user?.id;
+    const documentPath = req.params.documentPath;
+
+    if (!driverId) {
+      return res.status(401).json({ message: "Driver not authenticated" });
+    }
+
+    const driver = await Driver.findById(driverId);
+    if (!driver) {
+      return res.status(404).json({ message: "Driver not found" });
+    }
+
+    // Decode the document path (it might be URL encoded)
+    const decodedPath = decodeURIComponent(documentPath);
+    driver.documents = (driver.documents || []).filter(
+      (doc) => doc !== decodedPath && doc !== `/uploads/${decodedPath}`
+    );
+    await driver.save();
+
+    res.status(200).json({
+      message: "Document deleted successfully",
+      remainingDocuments: driver.documents.length,
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
 export {
   acceptRide,
   updateLocation,
@@ -322,4 +479,8 @@ export {
   getNearbyRides,
   startRide,
   getEarnings,
+  uploadLicense,
+  uploadDocuments,
+  deleteLicense,
+  deleteDocument,
 };

@@ -17,6 +17,11 @@ const calendarSchema = new Schema({
     type: String,
     required: true,
   },
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: false, // Optional for backward compatibility
+  },
   ItemsRequired: [
     {
       type: Schema.Types.ObjectId,

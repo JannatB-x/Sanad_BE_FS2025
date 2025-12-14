@@ -13,14 +13,16 @@ import { authorize } from "../middlewares/authorize";
 
 const router = express.Router();
 
-router.get("/", authorize, getAllNotifications);
+// Specific routes (must be before /:id to avoid conflicts)
 router.get("/unread/count", authorize, getUnreadCount);
-router.get("/:id", authorize, getNotificationById);
-router.post("/", createNotification);
-router.put("/:id", authorize, updateNotification);
-router.put("/:id/read", authorize, markAsRead);
 router.put("/read/all", authorize, markAllAsRead);
+router.put("/:id/read", authorize, markAsRead); // Must be before /:id
+
+// General routes
+router.get("/", authorize, getAllNotifications);
+router.get("/:id", authorize, getNotificationById);
+router.post("/", authorize, createNotification); // Protected - only authenticated users can create
+router.put("/:id", authorize, updateNotification);
 router.delete("/:id", authorize, deleteNotification);
 
 export default router;
-

@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 
 const notFoundHandler = (req: Request, res: Response, next: NextFunction) => {
-  res.status(404).json({ message: `404 - ${req.path} not found` });
+  console.log(`❌ Route not found: ${req.method} ${req.path}`);
+  res.status(404).json({ message: "Route not found" });
 };
 
 export default notFoundHandler;
