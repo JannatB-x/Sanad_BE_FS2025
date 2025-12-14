@@ -8,7 +8,7 @@ dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET;
 import { CustomRequest } from "../types/http.types";
 
-const getUsers = async (
+const getRiders = async (
   req: CustomRequest,
   res: Response,
   next: NextFunction
@@ -21,7 +21,7 @@ const getUsers = async (
   }
 };
 
-const getUserById = async (
+const getRiderById = async (
   req: CustomRequest,
   res: Response,
   next: NextFunction
@@ -34,7 +34,7 @@ const getUserById = async (
   }
 };
 
-const createUser = async (
+const createRider = async (
   req: CustomRequest,
   res: Response,
   next: NextFunction
@@ -47,86 +47,7 @@ const createUser = async (
   }
 };
 
-const updateUser = async (
-  req: CustomRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const updateData = req.body;
-
-    // Single file upload
-    if (req.file) {
-      updateData.statusDocument = req.file.path;
-    }
-
-    // Multiple files upload
-    if (req.files && Array.isArray(req.files)) {
-      updateData.statusDocuments = req.files.map((file) => file.path);
-    }
-
-    const user = await User.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-    });
-    res.status(200).json({ user });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const deleteUser = async (
-  req: CustomRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    res.status(200).json({ user });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const getUserRideHistory = async (
-  req: CustomRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const user = await User.findById(req.params.id).populate("rideHistory");
-    res.status(200).json({ user });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const getUserRideRatings = async (
-  req: CustomRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const user = await User.findById(req.params.id).populate("rideRatings");
-    res.status(200).json({ user });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const getUserAppointments = async (
-  req: CustomRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const user = await User.findById(req.params.id).populate("appointments");
-    res.status(200).json({ user });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const updateUserLocation = async (
+const updateRider = async (
   req: CustomRequest,
   res: Response,
   next: NextFunction
@@ -141,13 +62,97 @@ const updateUserLocation = async (
   }
 };
 
-const getUserLocation = async (
+const deleteRider = async (
   req: CustomRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const user = await User.findById(req.params.id).populate("location");
+    const user = await User.findByIdAndDelete(req.params.id);
+    res.status(200).json({ user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getRiderRideHistory = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = await User.findById(req.params.id).populate("rideHistory");
+    res.status(200).json({ user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getRiderRideRatings = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = await User.findById(req.params.id).populate("rideRatings");
+    res.status(200).json({ user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateRiderLocation = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.status(200).json({ user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateRiderStatus = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.status(200).json({ user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const toggleRiderAvailability = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.status(200).json({ user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getRiderEarnings = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = await User.findById(req.params.id).populate("earnings");
     res.status(200).json({ user });
   } catch (error) {
     next(error);
@@ -155,14 +160,15 @@ const getUserLocation = async (
 };
 
 export {
-  getUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser,
-  getUserRideHistory,
-  getUserRideRatings,
-  getUserAppointments,
-  updateUserLocation,
-  getUserLocation,
+  getRiders,
+  getRiderById,
+  createRider,
+  updateRider,
+  deleteRider,
+  getRiderRideHistory,
+  getRiderRideRatings,
+  getRiderEarnings,
+  updateRiderLocation,
+  updateRiderStatus,
+  toggleRiderAvailability,
 };
