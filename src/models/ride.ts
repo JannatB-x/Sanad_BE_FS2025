@@ -70,6 +70,9 @@ const rideSchema = new Schema({
   completedAt: {
     type: Date,
   },
+  cancelledAt: {
+    type: Date,
+  },
 });
 
 const Ride = model("Ride", rideSchema);

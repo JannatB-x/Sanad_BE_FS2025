@@ -71,6 +71,12 @@ const userSchema = new Schema({
       ref: "Transporters",
     },
   ],
+  SavedLocations: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "SavedLocations",
+    },
+  ],
 });
 
 const User = model("User", userSchema);

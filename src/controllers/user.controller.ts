@@ -61,30 +61,74 @@ const registerUser = async (
   next: NextFunction
 ) => {
   try {
-    const { Email, Password } = req.body;
+    const {
+      Email,
+      Password,
+      Username,
+      Name,
+      Identification,
+      MedicalHistory,
+      Disabilities,
+      FunctionalNeeds,
+      Location,
+      EmergencyContact,
+      EmergencyContactPhone,
+      EmergencyContactRelationship,
+    } = req.body;
+
+    // Validate required fields
+    if (!Email || !Password) {
+      return res
+        .status(400)
+        .json({ message: "Email and Password are required" });
+    }
+
+    // Check if user already exists
     const findUser = await User.findOne({ Email: Email });
-    console.log(findUser);
     if (findUser) {
       return res.status(400).json({ message: "User already exists" });
-    } else {
-      const hashedPassword = await bcrypt.hash(Password, 10);
-      console.log("Hashed Password");
-      const newUser = await User.create({
-        ...req.body,
-        Password: hashedPassword,
-      });
-      const userDoc = Array.isArray(newUser) ? newUser[0] : newUser;
-      console.log("New User Created");
-
-      const token = jwt.sign(
-        { id: userDoc._id.toString(), role: "user" },
-        JWT_SECRET as string,
-        { expiresIn: "1h" }
-      );
-
-      res.status(201).json({ user: userDoc, token });
     }
-  } catch (error) {
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(Password, 10);
+
+    // Create user with provided data or defaults
+    const newUser = await User.create({
+      Id: Username || Email.split("@")[0], // Use username or email prefix as ID
+      Name: Name || Username || Email.split("@")[0],
+      Role: "user",
+      Email: Email,
+      Password: hashedPassword,
+      Identification: Identification || "",
+      MedicalHistory: MedicalHistory || "",
+      Disabilities: Disabilities || "",
+      FunctionalNeeds: FunctionalNeeds || "",
+      Location: Location || "",
+      EmergencyContact: EmergencyContact || "",
+      EmergencyContactPhone: EmergencyContactPhone || "",
+      EmergencyContactRelationship: EmergencyContactRelationship || "",
+    });
+
+    const userDoc = Array.isArray(newUser) ? newUser[0] : newUser;
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: userDoc._id.toString(), role: "user" },
+      JWT_SECRET as string,
+      { expiresIn: "1h" }
+    );
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: {
+        id: userDoc._id,
+        email: userDoc.Email,
+        name: userDoc.Name,
+      },
+      token,
+    });
+  } catch (error: any) {
+    console.error("Registration error:", error);
     next(error);
   }
 };
@@ -104,10 +148,108 @@ const loginUser = async (req: Request, res: Response, next: NextFunction) => {
         JWT_SECRET as string,
         { expiresIn: "1h" }
       );
-      res.status(200).json({ token });
+      res.status(200).json({
+        message: "Login successful",
+        token,
+        user: {
+          id: findUser._id,
+          email: findUser.Email,
+          name: findUser.Name,
+          role: findUser.Role,
+        },
+      });
     } else {
       return res.status(400).json({ message: "User not found" });
     }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get current user profile
+const getCurrentUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const user = await User.findById(userId).select("-Password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "User profile retrieved successfully",
+      user: {
+        id: user._id,
+        name: user.Name,
+        email: user.Email,
+        role: user.Role,
+        identification: user.Identification,
+        location: user.Location,
+        medicalHistory: user.MedicalHistory,
+        disabilities: user.Disabilities,
+        functionalNeeds: user.FunctionalNeeds,
+        emergencyContact: user.EmergencyContact,
+        emergencyContactPhone: user.EmergencyContactPhone,
+        emergencyContactRelationship: user.EmergencyContactRelationship,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update current user profile
+const updateCurrentUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    // Don't allow password update through this endpoint
+    const { Password, ...updateData } = req.body;
+
+    const user = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    }).select("-Password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.Name,
+        email: user.Email,
+        role: user.Role,
+        identification: user.Identification,
+        location: user.Location,
+        medicalHistory: user.MedicalHistory,
+        disabilities: user.Disabilities,
+        functionalNeeds: user.FunctionalNeeds,
+        emergencyContact: user.EmergencyContact,
+        emergencyContactPhone: user.EmergencyContactPhone,
+        emergencyContactRelationship: user.EmergencyContactRelationship,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -121,4 +263,6 @@ export {
   deleteUser,
   registerUser,
   loginUser,
+  getCurrentUser,
+  updateCurrentUser,
 };

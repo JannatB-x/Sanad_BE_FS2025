@@ -225,6 +225,216 @@ const estimateFare = async (
   }
 };
 
+// Get upcoming rides (index)
+const getUpcomingRides = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const now = new Date();
+    const upcomingRides = await Ride.find({
+      riderId: userId,
+      status: { $in: ["requested", "accepted", "in_progress"] },
+      requestedAt: { $gte: now },
+    })
+      .populate("driverId")
+      .populate("riderId")
+      .sort({ requestedAt: 1 });
+
+    // Add driver location if driver is assigned
+    const ridesWithDriverLocation = await Promise.all(
+      upcomingRides.map(async (ride) => {
+        const rideObj: any = ride.toObject();
+        if (ride.driverId) {
+          const driver = await Driver.findById(ride.driverId)
+            .populate("currentLocation")
+            .lean();
+          if (driver && driver.currentLocation) {
+            rideObj.driverLocation = driver.currentLocation;
+          }
+        }
+        return rideObj;
+      })
+    );
+
+    res.status(200).json({
+      message: "Upcoming rides retrieved successfully",
+      rides: ridesWithDriverLocation,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get active driver location for a ride
+const getDriverLocation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+    const { rideId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const ride = await Ride.findOne({
+      _id: rideId,
+      riderId: userId,
+      status: { $in: ["accepted", "in_progress"] },
+    }).populate("driverId");
+
+    if (!ride) {
+      return res.status(404).json({
+        message: "Ride not found or driver not assigned yet",
+      });
+    }
+
+    if (!ride.driverId) {
+      return res.status(404).json({ message: "No driver assigned to this ride" });
+    }
+
+    const driver = await Driver.findById(ride.driverId)
+      .populate("currentLocation")
+      .lean();
+
+    if (!driver || !driver.currentLocation) {
+      return res.status(404).json({ message: "Driver location not available" });
+    }
+
+    res.status(200).json({
+      message: "Driver location retrieved successfully",
+      location: driver.currentLocation,
+      driver: {
+        id: driver._id,
+        isAvailable: driver.isAvailable,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Cancel a ride
+const cancelRide = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+    const { rideId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const ride = await Ride.findOne({
+      _id: rideId,
+      riderId: userId,
+    });
+
+    if (!ride) {
+      return res.status(404).json({ message: "Ride not found" });
+    }
+
+    // Only allow cancellation if ride is not completed
+    if (ride.status === "completed") {
+      return res
+        .status(400)
+        .json({ message: "Cannot cancel a completed ride" });
+    }
+
+    if (ride.status === "cancelled") {
+      return res.status(400).json({ message: "Ride is already cancelled" });
+    }
+
+    // If driver is assigned, make them available again
+    if (ride.driverId) {
+      await Driver.findByIdAndUpdate(ride.driverId, { isAvailable: true });
+    }
+
+    ride.status = "cancelled";
+    ride.cancelledAt = new Date();
+    await ride.save();
+
+    res.status(200).json({
+      message: "Ride cancelled successfully",
+      ride,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Edit delivery location (dropoff)
+const updateDropoffLocation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const r = req as CustomRequest;
+    const userId = r.user?.id;
+    const { rideId } = req.params;
+    const { dropoff } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    if (!dropoff || !dropoff.address || !dropoff.latitude || !dropoff.longitude) {
+      return res.status(400).json({
+        message: "Dropoff location with address, latitude, and longitude is required",
+      });
+    }
+
+    const ride = await Ride.findOne({
+      _id: rideId,
+      riderId: userId,
+    });
+
+    if (!ride) {
+      return res.status(404).json({ message: "Ride not found" });
+    }
+
+    // Only allow editing dropoff if ride hasn't started
+    if (ride.status === "in_progress" || ride.status === "completed") {
+      return res.status(400).json({
+        message: "Cannot change dropoff location after ride has started",
+      });
+    }
+
+    // Recalculate fare with new dropoff location
+    const { fare, distance, duration } = await calculateFare(
+      ride.pickup,
+      dropoff
+    );
+
+    ride.dropoff = dropoff;
+    ride.fare = fare;
+    ride.distance = distance;
+    ride.duration = duration;
+    await ride.save();
+
+    res.status(200).json({
+      message: "Dropoff location updated successfully",
+      ride,
+      updatedFare: fare,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   getAllRides,
   getRideById,
@@ -234,4 +444,8 @@ export {
   requestRide,
   getRideHistory,
   estimateFare,
+  getUpcomingRides,
+  getDriverLocation,
+  cancelRide,
+  updateDropoffLocation,
 };

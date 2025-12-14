@@ -1,6 +1,13 @@
 import dotenv from "dotenv";
 
-dotenv.config();
+// Load environment variables
+const result = dotenv.config();
+if (result.error) {
+  console.warn(
+    "⚠️  Warning: Error loading .env file in environment config:",
+    result.error.message
+  );
+}
 
 export const config = {
   port: process.env.PORT || 3000,
