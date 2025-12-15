@@ -8,6 +8,19 @@ dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET;
 import { CustomRequest } from "../types/http.types";
 
+const createCompany = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const company = await Company.create(req.body);
+    res.status(201).json({ company });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getCompanyProfile = async (
   req: CustomRequest,
   res: Response,
@@ -95,6 +108,7 @@ const addCompanyDrivers = async (
 };
 
 export {
+  createCompany,
   getCompanyProfile,
   updateCompanyProfile,
   deleteCompany,

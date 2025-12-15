@@ -40,10 +40,100 @@ const updateRide = async (
   next: NextFunction
 ) => {
   try {
-    const ride = await Ride.findByIdAndUpdate(req.params.id, req.body, {
+    const { id } = req.params;
+
+    if (!id) {
+      throw new AppError("Ride ID is required", 400);
+    }
+
+    const ride = await Ride.findById(id);
+
+    if (!ride) {
+      throw new AppError("Ride not found", 404);
+    }
+
+    // Update ride with new data
+    const updatedRide = await Ride.findByIdAndUpdate(id, req.body, {
       new: true,
+      runValidators: true,
     });
-    res.status(200).json({ ride });
+
+    res.status(200).json({
+      success: true,
+      message: "Ride updated successfully",
+      data: updatedRide,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const editRide = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (!id) {
+      throw new AppError("Ride ID is required", 400);
+    }
+
+    // Check if ride exists
+    const ride = await Ride.findById(id);
+
+    if (!ride) {
+      throw new AppError("Ride not found", 404);
+    }
+
+    // Validate that ride is not completed or cancelled (optional business logic)
+    if (ride.status === "COMPLETED" || ride.status === "CANCELLED") {
+      throw new AppError(
+        "Cannot edit a ride that is already completed or cancelled",
+        400
+      );
+    }
+
+    // Only allow updating specific fields
+    const allowedFields = [
+      "pickupLocation",
+      "dropoffLocation",
+      "price",
+      "paymentAmount",
+      "paymentMethod",
+      "paymentStatus",
+      "paymentDate",
+      "paymentTime",
+    ];
+
+    const filteredData: any = {};
+    Object.keys(updateData).forEach((key) => {
+      if (allowedFields.includes(key)) {
+        filteredData[key] = updateData[key];
+      }
+    });
+
+    if (Object.keys(filteredData).length === 0) {
+      throw new AppError("No valid fields to update", 400);
+    }
+
+    // Update ride
+    const updatedRide = await Ride.findByIdAndUpdate(
+      id,
+      { $set: filteredData },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Ride edited successfully",
+      data: updatedRide,
+    });
   } catch (error) {
     next(error);
   }
@@ -280,6 +370,7 @@ export {
   getRides,
   createRide,
   updateRide,
+  editRide,
   updateRideStatus,
   cancelRide,
   rateRide,

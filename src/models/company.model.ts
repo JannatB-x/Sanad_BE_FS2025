@@ -1,6 +1,7 @@
 import { ICompany } from "../types/company.type";
 import mongoose from "mongoose";
 import { UserType } from "../types/user.type";
+import { Schema } from "mongoose";
 
 const companySchema = new mongoose.Schema<ICompany>({
   name: { type: String, required: true },
@@ -21,7 +22,7 @@ const companySchema = new mongoose.Schema<ICompany>({
     default: UserType.COMPANY,
   },
   drivers: { type: [String], required: true },
-  vehicles: { type: [String], required: true },
+  vehicles: [{ type: Schema.Types.ObjectId, ref: "Vehicle", required: true }],
 });
 
 export default mongoose.model<ICompany>("Company", companySchema);

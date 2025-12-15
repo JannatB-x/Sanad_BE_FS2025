@@ -159,3 +159,30 @@ export const logout = async (
     message: "Logged out successfully",
   });
 };
+
+export const forgotPassword = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw new AppError("Email is required", 400);
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const resetToken = generateToken(user._id.toString());
+
+  res.status(200).json({
+    success: true,
+    message: "Reset token generated successfully",
+    data: {
+      resetToken,
+    },
+  });
+};

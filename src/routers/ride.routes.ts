@@ -3,6 +3,7 @@ import {
   getRides,
   createRide,
   updateRide,
+  editRide,
   updateRideStatus,
   cancelRide,
   rateRide,
@@ -22,6 +23,7 @@ const router = Router();
 router.get("/", getRides);
 router.post("/", createRide);
 router.put("/:id", updateRide);
+router.patch("/:id", editRide);
 router.put("/:id/status", updateRideStatus);
 router.put("/:id/cancel", cancelRide);
 router.put("/:id/rate", rateRide);

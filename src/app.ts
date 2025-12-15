@@ -16,6 +16,7 @@ import riderRoutes from "./routers/rider.routes";
 import rideRoutes from "./routers/ride.routes";
 import appointmentRoutes from "./routers/appointment.routes";
 import companyRoutes from "./routers/company.routes";
+import vehicleRoutes from "./routers/vehicle.routes";
 
 // Import middleware
 import { errorHandler, notFound } from "./middleware/errorHandler";
@@ -144,6 +145,9 @@ app.use(`${API_VERSION}/appointments`, appointmentRoutes);
 
 // Company routes
 app.use(`${API_VERSION}/companies`, companyRoutes);
+
+// Vehicle routes
+app.use(`${API_VERSION}/vehicles`, vehicleRoutes);
 
 // ============================================
 // 404 HANDLER
